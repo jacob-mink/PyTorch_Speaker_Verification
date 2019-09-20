@@ -1,0 +1,5 @@
+__pycache__
+
+*.model
+speech_id_checkpoint*/
+*_tisv/
