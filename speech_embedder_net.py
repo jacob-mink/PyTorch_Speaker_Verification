@@ -25,6 +25,7 @@ class SpeechEmbedder(nn.Module):
         self.projection = nn.Linear(hp.model.hidden, hp.model.proj)
         
     def forward(self, x):
+        self.LSTM_stack.flatten_parameters()
         x, _ = self.LSTM_stack(x.float()) #(batch, frames, n_mels)
         #only use last frame
         x = x[:,x.size(1)-1]

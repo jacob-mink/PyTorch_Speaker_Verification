@@ -5,10 +5,16 @@ import glob
 import os
 import librosa
 import numpy as np
+import soundfile as sf
 from hparam import hparam as hp
 
 # downloaded dataset path
-audio_path = glob.glob(os.path.dirname(hp.unprocessed_data))                                        
+audio_path = glob.glob(os.path.dirname(hp.unprocessed_data))
+print(len(audio_path))
+audio_path += list(set(['/'.join(x.split('/')[:-1]) for x in glob.glob(os.path.dirname(hp.unprocessed_data2))]))
+print(len(audio_path))
+audio_path += list(set(['/'.join(x.split('/')[:-1]) for x in glob.glob(os.path.dirname(hp.unprocessed_data3))]))
+print(len(audio_path))
 
 def save_spectrogram_tisv():
     """ Full preprocess of text independent utterance. The log-mel-spectrogram is saved as numpy file.
@@ -28,21 +34,32 @@ def save_spectrogram_tisv():
     for i, folder in enumerate(audio_path):
         print("%dth speaker processing..."%i)
         utterances_spec = []
-        for utter_name in os.listdir(folder):
-            if utter_name[-4:] == '.WAV':
-                utter_path = os.path.join(folder, utter_name)         # path of each utterance
+        audios = glob.glob(folder + '/**/*.WAV', recursive=True) + glob.glob(folder + '/**/*.flac', recursive=True) + glob.glob(folder + '/**/*.wav', recursive=True)
+        for utter_name in audios:
+            utter_path = os.path.join(folder, utter_name)         # path of each utterance
+            utter, sr = None, 0
+            if utter_path.endswith('.WAV') or utter_path.endswith('.wav'):
                 utter, sr = librosa.core.load(utter_path, hp.data.sr)        # load utterance audio
-                intervals = librosa.effects.split(utter, top_db=30)         # voice activity detection
-                for interval in intervals:
-                    if (interval[1]-interval[0]) > utter_min_len:           # If partial utterance is sufficient long,
-                        utter_part = utter[interval[0]:interval[1]]         # save first and last 180 frames of spectrogram.
-                        S = librosa.core.stft(y=utter_part, n_fft=hp.data.nfft,
-                                              win_length=int(hp.data.window * sr), hop_length=int(hp.data.hop * sr))
-                        S = np.abs(S) ** 2
-                        mel_basis = librosa.filters.mel(sr=hp.data.sr, n_fft=hp.data.nfft, n_mels=hp.data.nmels)
-                        S = np.log10(np.dot(mel_basis, S) + 1e-6)           # log mel spectrogram of utterances
-                        utterances_spec.append(S[:, :hp.data.tisv_frame])    # first 180 frames of partial utterance
-                        utterances_spec.append(S[:, -hp.data.tisv_frame:])   # last 180 frames of partial utterance
+            elif utter_path.endswith('.flac'):
+                utter, sr = sf.read(utter_path, dtype='float32')
+                utter = utter.T
+                utter, sr = librosa.resample(utter, sr, hp.data.sr), hp.data.sr
+            elif utter_path.endswith('.WAV.wav'):
+                #print("bad file ending: {}".format(utter_path))
+                continue
+            else:
+                raise ValueError("bad file ending: {}".format(utter_path))
+            intervals = librosa.effects.split(utter, top_db=30)         # voice activity detection
+            for interval in intervals:
+                if (interval[1]-interval[0]) > utter_min_len:           # If partial utterance is sufficient long,
+                    utter_part = utter[interval[0]:interval[1]]         # save first and last 180 frames of spectrogram.
+                    S = librosa.core.stft(y=utter_part, n_fft=hp.data.nfft,
+                                          win_length=int(hp.data.window * sr), hop_length=int(hp.data.hop * sr))
+                    S = np.abs(S) ** 2
+                    mel_basis = librosa.filters.mel(sr=hp.data.sr, n_fft=hp.data.nfft, n_mels=hp.data.nmels)
+                    S = np.log10(np.dot(mel_basis, S) + 1e-6)           # log mel spectrogram of utterances
+                    utterances_spec.append(S[:, :hp.data.tisv_frame])    # first 180 frames of partial utterance
+                    utterances_spec.append(S[:, -hp.data.tisv_frame:])   # last 180 frames of partial utterance
 
         utterances_spec = np.array(utterances_spec)
         print(utterances_spec.shape)

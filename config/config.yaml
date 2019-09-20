@@ -1,12 +1,15 @@
-training: !!bool "true"
+training: !!bool "false"
 device: "cuda"
-unprocessed_data: './TIMIT/*/*/*/*.wav'
+unprocessed_data: '/home/jacob/Documents/Research/datasets/TIMIT/data/*/*/*/*.WAV'
+unprocessed_data2: '/home/jacob/Documents/Research/datasets/LibriSpeech/dev-clean/*/*/*.flac'
+unprocessed_data3: '/home/jacob/Documents/Research/datasets/vox1_dev_wav/wav/*/*/*.wav'
+parallel: !!bool "true"
 ---
 data:
     train_path: './train_tisv'
-    train_path_unprocessed: './TIMIT/TRAIN/*/*/*.wav'
+    train_path_unprocessed: '/home/jacob/Documents/Research/datasets/TIMIT/data/TRAIN/*/*/*.wav'
     test_path: './test_tisv'
-    test_path_unprocessed: './TIMIT/TEST/*/*/*.wav'
+    test_path_unprocessed: '/home/jacob/Documents/Research/datasets/TIMIT/data/TEST/*/*/*.wav'
     data_preprocessed: !!bool "true" 
     sr: 16000
     nfft: 512 #For mel spectrogram preprocess
@@ -24,7 +27,7 @@ model:
 train:
     N : 4 #Number of speakers in batch
     M : 5 #Number of utterances per speaker
-    num_workers: 0 #number of workers for dataloader
+    num_workers: 1 #number of workers for dataloader
     lr: 0.01 
     epochs: 950 #Max training speaker epoch 
     log_interval: 30 #Epochs before printing progress

@@ -28,6 +28,8 @@ def train(model_path):
     embedder_net = SpeechEmbedder().to(device)
     if hp.train.restore:
         embedder_net.load_state_dict(torch.load(model_path))
+    if hp.parallel:
+        embedder_net = torch.nn.DataParallel(embedder_net).to(device)
     ge2e_loss = GE2ELoss(device)
     #Both net and loss have trainable parameters
     optimizer = torch.optim.SGD([
@@ -78,14 +80,14 @@ def train(model_path):
             embedder_net.eval().cpu()
             ckpt_model_filename = "ckpt_epoch_" + str(e+1) + "_batch_id_" + str(batch_id+1) + ".pth"
             ckpt_model_path = os.path.join(hp.train.checkpoint_dir, ckpt_model_filename)
-            torch.save(embedder_net.state_dict(), ckpt_model_path)
+            torch.save(embedder_net.module.state_dict() if hp.parallel else embedder_net.state_dict(), ckpt_model_path)
             embedder_net.to(device).train()
 
     #save model
     embedder_net.eval().cpu()
     save_model_filename = "final_epoch_" + str(e + 1) + "_batch_id_" + str(batch_id + 1) + ".model"
     save_model_path = os.path.join(hp.train.checkpoint_dir, save_model_filename)
-    torch.save(embedder_net.state_dict(), save_model_path)
+    torch.save(embedder_net.module.state_dict() if hp.parallel else embedder_net.state_dict(), save_model_path)
     
     print("\nDone, trained model saved at", save_model_path)
 
